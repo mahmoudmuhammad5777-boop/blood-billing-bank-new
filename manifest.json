@@ -1,0 +1,24 @@
+{
+  "name": "منظومة فواتير بنك الدم",
+  "short_name": "بنك الدم",
+  "description": "تطبيق إدارة فواتير بنك الدم - مركز نقل الدم ببني سويف",
+  "start_url": "/blood-billing-bank/",
+  "display": "standalone",
+  "background_color": "#f4f7f6",
+  "theme_color": "#2c3e50",
+  "orientation": "portrait",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192x192/e74c3c/ffffff?text=BB",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512x512/e74c3c/ffffff?text=BB",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
