@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منظومة فواتير بنك الدم</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #e74c3c; --bg: #f4f7f6; --success: #27ae60; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 15px; }
+        .container { max-width: 860px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-top: 0; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: var(--primary); font-size: 14px; }
+
+        .tier-toggle { display: flex; gap: 10px; margin-bottom: 15px; }
+        .tier-btn { flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; background: white; font-weight: bold; transition: 0.2s; font-size: 14px; }
+        .tier-btn:hover { background: #f0f0f0; }
+        .tier-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+        /* Chips - Grouped */
+        .section-label { font-weight: bold; color: var(--primary); margin-bottom: 10px; display: block; font-size: 14px; }
+
+        .chips-container { margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px; }
+
+        .chip-category { border-radius: 12px; overflow: hidden; border: 1px solid rgba(0,0,0,0.07); }
+        .chip-category-header {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 12px; font-size: 12px; font-weight: bold; letter-spacing: 0.3px;
+            color: white; user-select: none;
+        }
+        .chip-category-header .cat-icon { font-size: 15px; }
+        .chip-category-body { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px; background: #fff; }
+
+        /* Category color themes */
+        .cat-rbcs   .chip-category-header { background: linear-gradient(90deg,#c0392b,#e74c3c); }
+        .cat-rbcs   .chip { --cc:#e74c3c; --cc-bg:#fff5f5; --cc-light:#fde8e8; }
+        .cat-process .chip-category-header { background: linear-gradient(90deg,#1565c0,#1976d2); }
+        .cat-process .chip { --cc:#1976d2; --cc-bg:#e8f4fd; --cc-light:#d0e9f9; }
+        .cat-plasma .chip-category-header { background: linear-gradient(90deg,#6a1b9a,#8e24aa); }
+        .cat-plasma .chip { --cc:#8e24aa; --cc-bg:#f3e5f5; --cc-light:#e8d5f0; }
+        .cat-lab    .chip-category-header { background: linear-gradient(90deg,#00695c,#00897b); }
+        .cat-lab    .chip { --cc:#00897b; --cc-bg:#e0f2f1; --cc-light:#c8ece9; }
+        .cat-misc   .chip-category-header { background: linear-gradient(90deg,#e65100,#f57c00); }
+        .cat-misc   .chip { --cc:#f57c00; --cc-bg:#fff3e0; --cc-light:#ffe0b2; }
+
+        .chip-group { display: inline-flex; align-items: center; }
+        .chip {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: var(--cc-bg); border: 1.5px solid var(--cc);
+            border-radius: 20px; padding: 5px 11px;
+            font-size: 11.5px; font-weight: bold; cursor: pointer;
+            transition: 0.15s; color: var(--cc);
+            white-space: nowrap; user-select: none;
+        }
+        .chip:hover { background: var(--cc-light); transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+        .chip:active { transform: scale(0.95); }
+        .chip .chip-icon { font-size: 13px; }
+        .chip .chip-name { color: #222; }
+        .chip .chip-price { font-size: 10px; color: var(--cc); font-weight: normal; background: rgba(0,0,0,0.06); border-radius: 8px; padding: 1px 5px; }
+        .chip.added { background: var(--cc); color: white; border-color: var(--cc); border-radius: 20px 0 0 20px; }
+        .chip.added .chip-name { color: white; }
+        .chip.added .chip-price { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.2); }
+        .chip-count { display: none; align-items: center; background: var(--cc-bg); border: 1.5px solid var(--cc); border-right: none; border-radius: 0 20px 20px 0; overflow: hidden; }
+        .chip-count.show { display: inline-flex; }
+        .count-num { padding: 5px 7px; font-size: 12px; font-weight: bold; color: var(--cc); min-width: 20px; text-align: center; }
+        .minus-btn { width: 26px; height: 26px; border: none; background: #ffecec; color: var(--accent); font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.15s; border-radius: 0 20px 20px 0; }
+        .minus-btn:hover { background: var(--accent); color: white; }
+
+        /* جدول الفاتورة */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+        th, td { border: 1px solid #eee; padding: 9px 10px; text-align: center; font-size: 13px; }
+        th { background: #f8f9fa; color: var(--primary); }
+        .delete-btn { background: var(--accent); color: white; border: none; padding: 4px 9px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+        .cart-qty-controls { display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .cart-qty-btn { width: 22px; height: 22px; border: none; border-radius: 50%; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .cart-qty-btn.minus { background: #ffecec; color: var(--accent); }
+        .cart-qty-btn.plus  { background: #e8f5e9; color: var(--success); }
+
+        .invoice-summary { margin-top: 15px; background: #fffdfd; padding: 12px 15px; border: 1px solid #ffecec; border-radius: 8px; }
+        .summary-line { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 1.05em; }
+        .total-final { font-size: 1.3em; font-weight: bold; color: var(--accent); border-top: 2px solid #eee; padding-top: 8px; margin-top: 8px; }
+
+        /* رفع الصور */
+        .upload-section { margin-top: 15px; border: 2px dashed #ccc; border-radius: 10px; padding: 12px; background: #fafafa; }
+        .upload-section label { color: var(--primary); margin-bottom: 8px; }
+        .upload-btn-wrap { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .upload-btn { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold; }
+        .upload-btn:hover { opacity: 0.85; }
+        #fileInput { display: none; }
+        .images-preview { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .img-thumb { position: relative; display: inline-block; }
+        .img-thumb img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd; }
+        .img-thumb .del-img { position: absolute; top: -6px; left: -6px; background: var(--accent); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+
+        /* أزرار الأكشن */
+        .action-btns { margin-top: 15px; display: flex; gap: 10px; }
+        .add-btn { flex: 1; color: white; border: none; padding: 11px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
+        .add-btn:hover { opacity: 0.9; }
+
+        /* السجل */
+        .history-section { margin-top: 25px; border-top: 2px solid #eee; padding-top: 18px; }
+        .history-section h3 { color: var(--primary); margin-bottom: 10px; }
+        .inv-card { background: #f9f9f9; border: 1px solid #eee; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+        .inv-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .inv-card-header .inv-num { font-weight: bold; color: var(--primary); font-size: 14px; }
+        .inv-card-header .inv-date { font-size: 12px; color: #888; }
+        .inv-card-header .inv-tier { font-size: 11px; background: var(--accent); color: white; border-radius: 10px; padding: 2px 8px; }
+        .inv-items { font-size: 12px; color: #555; margin-bottom: 8px; }
+        .inv-total { font-weight: bold; color: var(--accent); font-size: 14px; }
+        .inv-imgs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .inv-imgs img { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; }
+        .inv-del-btn { background: none; border: none; color: #bbb; cursor: pointer; font-size: 12px; text-decoration: underline; margin-top: 6px; display: block; }
+        .inv-del-btn:hover { color: var(--accent); }
+        .empty-hist { text-align: center; color: #999; font-size: 13px; padding: 15px; }
+
+        /* lightbox */
+        .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 999; align-items: center; justify-content: center; }
+        .lightbox.open { display: flex; }
+        .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+        .lightbox-close { position: absolute; top: 15px; left: 15px; color: white; font-size: 28px; cursor: pointer; background: none; border: none; }
+
+        .empty-cart { text-align: center; padding: 18px; color: #999; font-size: 13px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>🩸 منظومة فواتير بنك الدم</h2>
+
+    <!-- نوع التسعير -->
+    <label>نوع التسعير:</label>
+    <div class="tier-toggle">
+        <button class="tier-btn active" id="subsidizedBtn" onclick="setTier('subsidized')">أسعار مدعمة</button>
+        <button class="tier-btn" id="hospitalBtn" onclick="setTier('hospital')">مستشفيات خاصة</button>
+    </div>
+
+    <!-- الخدمات -->
+    <span class="section-label">🩸 اضغط على الخدمة لإضافتها مباشرة:</span>
+    <div class="chips-container" id="chipsWrap"></div>
+
+    <!-- جدول الفاتورة -->
+    <table>
+        <thead>
+            <tr>
+                <th>الخدمة</th><th>السعر</th><th>الكمية</th><th>الإجمالي</th><th>حذف</th>
+            </tr>
+        </thead>
+        <tbody id="cartBody">
+            <tr class="empty-cart"><td colspan="5">لا توجد خدمات مضافة بعد</td></tr>
+        </tbody>
+    </table>
+
+    <!-- رصيد بداية الشفت - يدخله مرة واحدة -->
+    <div style="margin-bottom:12px; background:#f0f4ff; border:1.5px solid #c5d0f0; border-radius:10px; padding:12px;">
+        <label style="margin-bottom:6px; color:#2c3e50;">💰 رصيد بداية الشفت (ما قبله الأول):</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <input type="number" id="shiftOpening" min="0" placeholder="0"
+                style="width:130px; padding:8px; border:1px solid #bbb; border-radius:8px; font-size:16px; text-align:center;"
+                oninput="updateGrandTotal()">
+            <span style="font-size:13px; color:#666;">ج.م</span>
+            <button onclick="resetShift()" style="background:none;border:1px solid #e74c3c;color:#e74c3c;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">إعادة ضبط الشفت</button>
+        </div>
+    </div>
+
+    <div class="invoice-summary">
+        <div class="summary-line"><span>إجمالي الخدمات:</span><span><span id="subTotal">0</span> ج.م</span></div>
+        <div class="summary-line" style="color:#666;"><span>طابع شهداء:</span><span>5 ج.م</span></div>
+        <div class="summary-line" style="font-weight:bold;"><span>إجمالي الفاتورة:</span><span><span id="finalTotal">5</span> ج.م</span></div>
+        <div class="summary-line" style="color:#888; border-top:1px dashed #eee; padding-top:8px; margin-top:6px;">
+            <span>ما قبله (تراكمي):</span><span><span id="prevBalance">0</span> ج.م</span>
+        </div>
+        <div class="summary-line total-final"><span>الجملة الكلية:</span><span><span id="grandTotal">5</span> ج.م</span></div>
+    </div>
+
+    <!-- رفع الصور -->
+    <div class="upload-section">
+        <label>📎 إرفاق صور إثبات القرابة (بطاقة / قرابة / خلافه):</label>
+        <div class="upload-btn-wrap">
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">📷 اختر صور</button>
+            <span id="imgCount" style="font-size:12px;color:#888;">لا توجد صور</span>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" multiple onchange="addImages(event)">
+        <div class="images-preview" id="imagesPreview"></div>
+    </div>
+
+    <!-- أزرار -->
+    <div class="action-btns">
+        <button class="add-btn" style="background:var(--success);" onclick="saveInvoice()">💾 حفظ في السجل</button>
+        <button class="add-btn" style="background:var(--accent); flex: 0.5;" onclick="clearCart()">مسح</button>
+    </div>
+
+    <!-- السجل -->
+    <div class="history-section">
+        <h3>📋 سجل الفواتير</h3>
+        <div id="historyList"></div>
+        <button onclick="clearHistory()" style="color:red;background:none;border:none;cursor:pointer;font-size:11px;text-decoration:underline;">مسح السجل بالكامل</button>
+    </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img id="lightboxImg" src="" alt="">
+</div>
+
+<script>
+    const prices = {
+        subsidized: {
+            "P.RBCs CPDA1":310,"P.RBCs SAGM":375,"Up to 50 ml":110,"Up to 100 ml":185,
+            "B. Group":50,"X-match":30,"Washed":60,"Filter":500,"Aliquoting":125,
+            "AB Screening":125,"1 Parameter":125,"Identification":435,"F.F.P":60,
+            "F.P":50,"C.S.P":50,"Cryo":85,"Pooled":125,"Transfusion set":25
+        },
+        hospital: {
+            "P.RBCs CPDA1":900,"P.RBCs SAGM":975,"Up to 50 ml":180,"Up to 100 ml":300,
+            "B. Group":150,"X-match":75,"Washed":150,"Filter":750,"Aliquoting":225,
+            "AB Screening":225,"1 Parameter":300,"Identification":750,"F.F.P":105,
+            "F.P":90,"C.S.P":90,"Cryo":120,"Pooled":225,"Transfusion set":45
+        }
+    };
+
+    let currentTier = 'subsidized';
+    let cart = [];
+    let uploadedImages = [];
+
+    // حساب الرصيد التراكمي من فواتير الشفت الحالي
+    function getShiftRunningTotal() {
+        const history = JSON.parse(localStorage.getItem('invoiceHistory')||'[]');
+        const shiftId = localStorage.getItem('currentShiftId') || '';
+        if (!shiftId) return 0;
+        // جمع كل فواتير الشفت الحالي
+        return history
+            .filter(inv => inv.shiftId === shiftId)
+            .reduce((sum, inv) => sum + inv.amount, 0);
+    }
+
+    function updateTotals() {
+        const sub = cart.reduce((s,i) => s + i.price*i.qty, 0);
+        document.getElementById('subTotal').textContent = sub;
+        document.getElementById('finalTotal').textContent = sub + 5;
+        updateGrandTotal();
+    }
+
+    function updateGrandTotal() {
+        const opening = parseInt(document.getElementById('shiftOpening').value) || 0;
+        const running = getShiftRunningTotal();
+        const prev = opening + running;
+        const finalTotal = parseInt(document.getElementById('finalTotal').textContent) || 5;
+        document.getElementById('prevBalance').textContent = prev;
+        document.getElementById('grandTotal').textContent = prev + finalTotal;
+    }
+
+    function resetShift() {
+        if (!confirm('إعادة ضبط الشفت؟ سيبدأ التراكم من الصفر.')) return;
+        localStorage.removeItem('currentShiftId');
+        document.getElementById('shiftOpening').value = '';
+        updateGrandTotal();
+    }
+
+    function k(s) { return s.replace(/[\s.]/g,'_'); }
+
+    // ── تعريف الفئات ──
+    const categories = [
+        { key:'cat-rbcs',    label:'كريات حمراء',    icon:'🔴', services:['P.RBCs CPDA1','P.RBCs SAGM','Up to 50 ml','Up to 100 ml'], icons:{'P.RBCs CPDA1':'🩸','P.RBCs SAGM':'🩸','Up to 50 ml':'🔬','Up to 100 ml':'🔬'} },
+        { key:'cat-process', label:'معالجة الوحدات', icon:'⚙️', services:['Washed','Filter','Aliquoting'],                            icons:{'Washed':'🫧','Filter':'🧲','Aliquoting':'✂️'} },
+        { key:'cat-plasma',  label:'بلازما ومشتقات', icon:'💛', services:['F.F.P','F.P','C.S.P','Cryo','Pooled'],                    icons:{'F.F.P':'💉','F.P':'💛','C.S.P':'🟡','Cryo':'❄️','Pooled':'🔗'} },
+        { key:'cat-lab',     label:'فحوصات مخبرية',  icon:'🧪', services:['B. Group','X-match','AB Screening','1 Parameter','Identification'], icons:{'B. Group':'🅱️','X-match':'🔄','AB Screening':'🔍','1 Parameter':'📊','Identification':'🧬'} },
+        { key:'cat-misc',    label:'مستلزمات',        icon:'🛒', services:['Transfusion set'],                                         icons:{'Transfusion set':'🩺'} }
+    ];
+
+    // ── Chips ──
+    function initChips() {
+        const wrap = document.getElementById('chipsWrap');
+        wrap.innerHTML = '';
+        categories.forEach(cat => {
+            const validServices = cat.services.filter(s => prices[currentTier][s] !== undefined);
+            if (!validServices.length) return;
+            const catDiv = document.createElement('div');
+            catDiv.className = 'chip-category ' + cat.key;
+            const header = document.createElement('div');
+            header.className = 'chip-category-header';
+            header.innerHTML = '<span class="cat-icon">' + cat.icon + '</span><span>' + cat.label + '</span>';
+            const body = document.createElement('div');
+            body.className = 'chip-category-body';
+            validServices.forEach(service => {
+                const price = prices[currentTier][service];
+                const id = k(service);
+                const inCart = cart.find(i => i.service === service);
+                const qty = inCart ? inCart.qty : 0;
+                const icon = cat.icons[service] || '▪';
+                const group = document.createElement('span');
+                group.className = 'chip-group';
+                group.id = 'group-' + id;
+                group.innerHTML =
+                    '<span class="chip ' + (qty>0?'added':'') + '" id="chip-' + id + '" onclick="tapChip(\'' + service + '\')">' +
+                    '<span class="chip-icon">' + icon + '</span>' +
+                    '<span class="chip-name">' + service + '</span>' +
+                    '<span class="chip-price">' + price + 'ج</span>' +
+                    '</span>' +
+                    '<span class="chip-count ' + (qty>0?'show':'') + '" id="count-' + id + '">' +
+                    '<span class="count-num" id="num-' + id + '">' + qty + '</span>' +
+                    '<button class="minus-btn" onclick="minusChip(\'' + service + '\')">−</button>' +
+                    '</span>';
+                body.appendChild(group);
+            });
+            catDiv.appendChild(header);
+            catDiv.appendChild(body);
+            wrap.appendChild(catDiv);
+        });
+    }
+
+    function tapChip(service) {
+        const price = prices[currentTier][service];
+        const existing = cart.find(i => i.service === service);
+        if (existing) existing.qty++;
+        else cart.push({ service, price, qty: 1 });
+        updateChipUI(service);
+        renderCart();
+    }
+
+    function minusChip(service) {
+        const idx = cart.findIndex(i => i.service === service);
+        if (idx === -1) return;
+        cart[idx].qty--;
+        if (cart[idx].qty <= 0) cart.splice(idx, 1);
+        updateChipUI(service);
+        renderCart();
+    }
+
+    function updateChipUI(service) {
+        const id = k(service);
+        const inCart = cart.find(i => i.service === service);
+        const qty = inCart ? inCart.qty : 0;
+        document.getElementById(`chip-${id}`).classList.toggle('added', qty > 0);
+        document.getElementById(`count-${id}`).classList.toggle('show', qty > 0);
+        document.getElementById(`num-${id}`).textContent = qty;
+    }
+
+    function setTier(tier) {
+        currentTier = tier;
+        document.getElementById('subsidizedBtn').classList.toggle('active', tier==='subsidized');
+        document.getElementById('hospitalBtn').classList.toggle('active', tier==='hospital');
+        cart.forEach(item => { item.price = prices[currentTier][item.service]; });
+        initChips();
+        renderCart();
+    }
+
+    // ── Cart ──
+    function renderCart() {
+        const tbody = document.getElementById('cartBody');
+        tbody.innerHTML = '';
+        if (cart.length === 0) {
+            tbody.innerHTML = '<tr class="empty-cart"><td colspan="5">لا توجد خدمات مضافة بعد</td></tr>';
+            updateTotals(); return;
+        }
+        cart.forEach((item, index) => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${item.service}</td>
+                    <td>${item.price} ج.م</td>
+                    <td>
+                        <div class="cart-qty-controls">
+                            <button class="cart-qty-btn minus" onclick="changeCartQty(${index},-1)">−</button>
+                            <span>${item.qty}</span>
+                            <button class="cart-qty-btn plus" onclick="changeCartQty(${index},1)">+</button>
+                        </div>
+                    </td>
+                    <td>${item.price * item.qty} ج.م</td>
+                    <td><button class="delete-btn" onclick="removeItem(${index})">حذف</button></td>
+                </tr>`;
+        });
+        updateTotals();
+    }
+
+    function changeCartQty(index, delta) {
+        cart[index].qty = Math.max(1, cart[index].qty + delta);
+        updateChipUI(cart[index].service);
+        renderCart();
+    }
+
+    function removeItem(index) {
+        const service = cart[index].service;
+        cart.splice(index, 1);
+        updateChipUI(service);
+        renderCart();
+    }
+
+    function clearCart() {
+        if (cart.length === 0 && uploadedImages.length === 0) return;
+        if (confirm('مسح الفاتورة والصور الحالية؟')) {
+            const services = cart.map(i => i.service);
+            cart = [];
+            uploadedImages = [];
+            services.forEach(s => updateChipUI(s));
+            renderCart();
+            renderImagePreview();
+        }
+    }
+
+    // ── حفظ الفاتورة ──
+    function saveInvoice() {
+        if (cart.length === 0) { alert('الرجاء إضافة خدمات للفاتورة أولاً'); return; }
+
+        // تأكد إن الشفت عنده ID - لو مفيش ابدأ شفت جديد
+        let shiftId = localStorage.getItem('currentShiftId');
+        if (!shiftId) {
+            shiftId = 'shift_' + Date.now();
+            localStorage.setItem('currentShiftId', shiftId);
+        }
+
+        const opening = parseInt(document.getElementById('shiftOpening').value) || 0;
+        const running = getShiftRunningTotal();
+        const prev = opening + running;
+        const finalTotal = parseInt(document.getElementById('finalTotal').textContent);
+        const grandTotal = prev + finalTotal;
+        const tier = currentTier==='subsidized' ? 'مدعمة' : 'مستشفيات خاصة';
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('ar-EG', { year:'numeric', month:'long', day:'numeric' });
+        const timeStr = now.toLocaleTimeString('ar-EG', { hour:'2-digit', minute:'2-digit' });
+
+        const inv = {
+            id: Date.now(),
+            shiftId,
+            tier,
+            amount: finalTotal,
+            prevBalance: prev,
+            grandTotal,
+            date: dateStr,
+            time: timeStr,
+            items: [...cart],
+            images: uploadedImages.map(i => ({ name: i.name, dataUrl: i.dataUrl }))
+        };
+
+        let history = JSON.parse(localStorage.getItem('invoiceHistory')||'[]');
+        history.unshift(inv);
+        localStorage.setItem('invoiceHistory', JSON.stringify(history));
+
+        alert('✅ تم حفظ الفاتورة بنجاح');
+        const services = cart.map(i => i.service);
+        cart = [];
+        uploadedImages = [];
+        services.forEach(s => updateChipUI(s));
+        renderCart();
+        renderImagePreview();
+        updateGrandTotal();
+        loadHistory();
+    }
+    function addImages(event) {
+        const files = Array.from(event.target.files);
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = e => {
+                uploadedImages.push({ name: file.name, dataUrl: e.target.result });
+                renderImagePreview();
+            };
+            reader.readAsDataURL(file);
+        });
+        event.target.value = '';
+    }
+
+    function renderImagePreview() {
+        const preview = document.getElementById('imagesPreview');
+        const count = document.getElementById('imgCount');
+        preview.innerHTML = '';
+        count.textContent = uploadedImages.length > 0 ? `${uploadedImages.length} صورة مرفقة` : 'لا توجد صور';
+        uploadedImages.forEach((img, idx) => {
+            preview.innerHTML += `
+                <div class="img-thumb">
+                    <img src="${img.dataUrl}" alt="${img.name}" onclick="openLightbox('${img.dataUrl}')">
+                    <button class="del-img" onclick="removeImage(${idx})">✕</button>
+                </div>`;
+        });
+    }
+
+    function removeImage(idx) {
+        uploadedImages.splice(idx, 1);
+        renderImagePreview();
+    }
+
+    function openLightbox(src) {
+        document.getElementById('lightboxImg').src = src;
+        document.getElementById('lightbox').classList.add('open');
+    }
+    function closeLightbox() {
+        document.getElementById('lightbox').classList.remove('open');
+    }
+
+    // ── السجل ──
+    function loadHistory() {
+        const history = JSON.parse(localStorage.getItem('invoiceHistory')||'[]');
+        const list = document.getElementById('historyList');
+        list.innerHTML = '';
+        if (!history.length) {
+            list.innerHTML = '<div class="empty-hist">لا توجد فواتير محفوظة</div>';
+            return;
+        }
+        history.forEach((inv, i) => {
+            const itemsSummary = inv.items.map(it => `${it.service} ×${it.qty}`).join(' | ');
+            const imgsHTML = inv.images && inv.images.length
+                ? `<div class="inv-imgs">${inv.images.map(img => `<img src="${img.dataUrl}" alt="${img.name}" onclick="openLightbox('${img.dataUrl}')">`).join('')}</div>`
+                : '';
+            const prevHTML = inv.prevBalance > 0
+                ? `<div style="font-size:12px;color:#888;margin-top:4px;">ما قبله: ${inv.prevBalance} ج.م &nbsp;|&nbsp; <strong style="color:var(--accent);">الجملة: ${inv.grandTotal} ج.م</strong></div>`
+                : '';
+            list.innerHTML += `
+                <div class="inv-card">
+                    <div class="inv-card-header">
+                        <span class="inv-num">فاتورة #${history.length - i}</span>
+                        <span class="inv-date">🕐 ${inv.time} — ${inv.date}</span>
+                        <span class="inv-tier">${inv.tier}</span>
+                    </div>
+                    <div class="inv-items">${itemsSummary}</div>
+                    <div class="inv-total">إجمالي الفاتورة: ${inv.amount} ج.م</div>
+                    ${prevHTML}
+                    ${imgsHTML}
+                    <button class="inv-del-btn" onclick="deleteInvoice(${inv.id})">حذف هذه الفاتورة</button>
+                </div>`;
+        });
+    }
+
+    function deleteInvoice(id) {
+        if (!confirm('حذف هذه الفاتورة من السجل؟')) return;
+        let history = JSON.parse(localStorage.getItem('invoiceHistory')||'[]');
+        history = history.filter(inv => inv.id !== id);
+        localStorage.setItem('invoiceHistory', JSON.stringify(history));
+        loadHistory();
+    }
+
+    function clearHistory() {
+        if (confirm('⚠️ مسح جميع السجلات؟ لا يمكن التراجع!')) {
+            localStorage.removeItem('invoiceHistory');
+            loadHistory();
+        }
+    }
+
+    window.onload = () => { initChips(); renderCart(); updateGrandTotal(); loadHistory(); };
+</script>
+</body>
+</html>
